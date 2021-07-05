@@ -1,12 +1,13 @@
-import re,os,time,sys
+import re,os,time
 from shutil import rmtree
 import requests
 import base64,json
 from Crypto.Cipher import AES
 from queue import Queue
 from threading import Thread
-import logging
+import platform
 
+system = platform.system()
 q = Queue(10000)
 
 title = ''
@@ -38,7 +39,8 @@ class m3u8infos:
                 self.title = m3u8.split('?')[0].split('/')[-1].replace('.m3u8', '')
             else:
                 self.title = name
-            self.m3u8text = requests.get(url=m3u8, headers=headers).text
+            requests.packages.urllib3.disable_warnings()
+            self.m3u8text = requests.get(url=m3u8, headers=headers,verify=False).text
             self.m3u8BaseUrl = '/'.join(m3u8.split('?')[0].split('/')[:-1]) + '/'
         # C:\Users\happy\Downloads\v.f230 (1).m3u8
         else:
@@ -109,7 +111,9 @@ class m3u8infos:
         if 'base64:' in keyurl:
             b64key = re.findall('base64:(.+)',keyurl)[0]
             return b64key
-        key = requests.get(url=keyurl,headers=headers).content
+
+        requests.packages.urllib3.disable_warnings()
+        key = requests.get(url=keyurl,headers=headers,verify=False).content
         b64key = base64.b64encode(key).decode()
         if method == 'AES-128':
             return b64key
@@ -150,7 +154,8 @@ class Consumer(Thread):
         retries = 16
         for i in range(retries):
             try:
-                response = requests.get(url=segment['segUrl'], headers=headers, timeout=5)
+                requests.packages.urllib3.disable_warnings()
+                response = requests.get(url=segment['segUrl'], headers=headers, timeout=5,stream=True,verify=False)
                 ts = response.content
                 if response.status_code == 200:
                     break
@@ -164,12 +169,21 @@ class Consumer(Thread):
             if len(key) != 16:
                 print('The key is wrong!')
             iv = base64.b64decode(segment['iv'])
-            cryptor = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+
+            cryptor = AES.new(key=key, mode=AES.MODE_CBC,iv=iv)
+
             ts = cryptor.decrypt(ts)
-        if os.path.exists(f'{title}/Part_0') == False:
-            os.makedirs(f'{title}/Part_0')
-        with open(f'{title}/Part_0/{index}.ts', 'wb') as f:
-            f.write(ts)
+        if system == 'Linux':
+            if os.path.exists(f'{title}/Part_0') == False:
+                os.makedirs(f'{title}/Part_0')
+            with open(f'{title}/Part_0/{index}.ts', 'wb') as f:
+                f.write(ts)
+        elif system == 'Windows':
+            if os.path.exists(fr'{title}\Part_0') == False:
+                os.makedirs(fr'{title}\Part_0')
+            with open(fr'{title}\Part_0\{index}.ts', 'wb') as f:
+                f.write(ts)
+
         # 进度条
         downsize += ts.__sizeof__()
         Missions_completed += 1
@@ -200,20 +214,31 @@ class Consumer(Thread):
             os.system(cmd)
 
         elif arg == 'copyb':
-            filelist = [fr"{os.path.abspath('')}\{title}\Part_0\{str(i).zfill(6)}.ts" for i in range(count)]
-            with open(fr"{os.path.abspath('')}\{title}\{title}.ts",'wb') as f:
+            if system == 'Linux':
+                filelist = [fr"{os.path.abspath('')}/{title}/Part_0/{str(i).zfill(6)}.ts" for i in range(count)]
                 for ts_po in filelist:
-                    with open(ts_po,'rb') as t:
-                        f.write(t.read())
-        # 检查合并是否完成
-        if os.path.exists(fr"{os.path.abspath('')}\{title}\{title}.ts") == True:
-            print('\t合并完成！\t',end='')
-            # 视频转码
-            # ffmpeg -y -i II_11_3_1.ts -c:v libx264 -c:a copy -bsf:a aac_adtstoasc output.mp4
-            print('视频转码……\t',end='')
-            cmd = fr'ffmpeg -i "{os.path.abspath("")}\{title}\{title}.ts" -c copy "{os.path.abspath("")}\{title}.mp4" -loglevel panic'
-            os.system(cmd)
-            print('转码成功！')
+                    with open(fr"{os.path.abspath('')}/{title}/{title}.ts", 'ab') as f:
+                        with open(ts_po, 'rb') as t:
+                            f.write(t.read())
+                # 检查合并是否完成
+                if os.path.exists(fr"{os.path.abspath('')}/{title}/{title}.ts") == True:
+                    print('\t合并完成！', end='')
+
+            elif system == 'Windows':
+                filelist = [fr"{os.path.abspath('')}\{title}\Part_0\{str(i).zfill(6)}.ts" for i in range(count)]
+                for ts_po in filelist:
+                    with open(fr"{os.path.abspath('')}\{title}\{title}.ts", 'ab') as f:
+                        with open(ts_po, 'rb') as t:
+                            f.write(t.read())
+                # 检查合并是否完成
+                if os.path.exists(fr"{os.path.abspath('')}\{title}\{title}.ts") == True:
+                    print('\t合并完成！', end='')
+                    # 视频转码
+                    # ffmpeg -y -i II_11_3_1.ts -c:v libx264 -c:a copy -bsf:a aac_adtstoasc output.mp4
+                    print('视频转码……\t',end='')
+                    cmd = fr'ffmpeg -i "{os.path.abspath("")}\{title}\{title}.ts" -c copy "{os.path.abspath("")}\{title}.mp4" -loglevel panic'
+                    os.system(cmd)
+                    print('转码成功！')
 
             if enabledel == True:
                 self.del_after_done()
@@ -227,21 +252,18 @@ class Consumer(Thread):
             print('删除分片成功！')
 
 def run(m3u8,name='',b64key='',b64iv='',enableDel=False,m3u8BaseUrl=''):
+    m3u8infos(m3u8, name, b64key, b64iv, m3u8BaseUrl, enableDel).putsegments()
     try:
         m3u8infos(m3u8, name, b64key, b64iv, m3u8BaseUrl, enableDel).putsegments()
     except:
         print('Error in reading file.')
-        sys.exit(0)
+    #     sys.exit(0)
     for i in range(16):
         t = Consumer()
         t.start()
 
 if __name__ == '__main__':
-    m3u8 = r"C:\Users\happy\Desktop\清大东方\0-4-5.m3u8"
-    # m3u8 = r"C:\Users\happy\Downloads\v.f230 (1).m3u8"
-    try:
-        run(m3u8=m3u8, name='', b64key='',m3u8BaseUrl='')
-    except Exception as e:
-        logging.exception(e)
+    m3u8 = r'https://video-tx.huke88.com/cb3d3408vodtransgzp1256517420/4dfb4d0b5285890807377114074/voddrm.token.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9~eyJ0eXBlIjoiRHJtVG9rZW4iLCJhcHBJZCI6MTI1NjUxNzQyMCwiZmlsZUlkIjoiNTI4NTg5MDgwNzM3NzExNDA3NCIsImN1cnJlbnRUaW1lU3RhbXAiOjE2MjU0OTA1MDEsImV4cGlyZVRpbWVTdGFtcCI6MjE0NzQ4MzY0NywicmFuZG9tIjo0MTg3ODIwOTg5LCJvdmVybGF5S2V5IjoiMGZjYTc0MzJmZGIzNDQ5YzBhNzIzMjg2NTA0ZDk4ODYiLCJvdmVybGF5SXYiOiJmZDZiOGEyMmNkNWFmOTk3Zjc5MDhkNTkxMGVkMGQwYiIsImNpcGhlcmVkT3ZlcmxheUtleSI6IiIsImNpcGhlcmVkT3ZlcmxheUl2IjoiIiwia2V5SWQiOjAsInN0cmljdE1vZGUiOjB9~2TknVZiPdfYi__AG7n4QyXG7CQzdaUakS33uFb6CRk0.video_12_3.m3u8?rlimit=3&sign=dd8e20c1818948ba0185f18cdbd69371&t=60e32e71&us=1625490497'
+    run(m3u8=m3u8, name='', b64key='',m3u8BaseUrl='')
 
 
