@@ -1,4 +1,5 @@
 import re,os,time
+from ffmpy import FFmpeg
 from shutil import rmtree
 import requests
 import base64,json
@@ -160,7 +161,7 @@ class Consumer(Thread):
                 if response.status_code == 200:
                     break
             except:
-                print(f'\r\t{index}.ts requests failed {i} times.')
+                print(f'\r\t{index}.ts requests failed {i+1} times.')
                 if i == 15:
                     ts = b''
 
@@ -199,60 +200,59 @@ class Consumer(Thread):
 
         if Missions_completed == count:
             # arg = 'copyb' if segment['method'] == 'SAMPLE-AES-CTR' else 'normal'
-            arg = 'copyb'
-            self.combine(arg)
+            self.combine()
 
-    def combine(self,arg):
+    def combine(self):
+        """
+        采用二进制合并
+        Linux Windows 路径写法不同，代码大部分重复
+        :return:
+        """
         print('\t视频合并中……',end='')
-        # 合并
-        if arg == 'normal':
-            filelists = [fr"file '{os.path.abspath('')}\{title}\Part_0\{str(i).zfill(6)}.ts'" for i in range(count)]
-            with open(fr"{os.path.abspath('')}\{title}\filelist.txt", 'w') as f:
-                text = '\n'.join(filelists)
-                f.write(text)
-            cmd = fr"ffmpeg -f concat -safe 0 -i {os.path.abspath('')}\{title}\filelist.txt -c copy {os.path.abspath('')}\{title}.ts -loglevel panic"
-            os.system(cmd)
+        if system == 'Linux':
+            filelist = [fr"{os.path.abspath('')}/{title}/Part_0/{str(i).zfill(6)}.ts" for i in range(count)]
+            for ts_po in filelist:
+                with open(fr"{os.path.abspath('')}/{title}/{title}.ts", 'ab') as f:
+                    with open(ts_po, 'rb') as t:
+                        f.write(t.read())
+            # 检查合并是否完成
+            if os.path.exists(fr"{os.path.abspath('')}/{title}/{title}.ts") == True:
+                print('\t合并完成！', end='')
+                print('视频转码……\t', end='')
+                self.ffmpeg(input_path=fr'{os.path.abspath("")}/{title}/{title}.ts',
+                            output_path=fr'{os.path.abspath("")}/{title}.mp4')
+                print('转码成功！\t', end='')
 
-        elif arg == 'copyb':
-            if system == 'Linux':
-                filelist = [fr"{os.path.abspath('')}/{title}/Part_0/{str(i).zfill(6)}.ts" for i in range(count)]
-                for ts_po in filelist:
-                    with open(fr"{os.path.abspath('')}/{title}/{title}.ts", 'ab') as f:
-                        with open(ts_po, 'rb') as t:
-                            f.write(t.read())
-                # 检查合并是否完成
-                if os.path.exists(fr"{os.path.abspath('')}/{title}/{title}.ts") == True:
-                    print('\t合并完成！', end='')
+        elif system == 'Windows':
+            filelist = [fr"{os.path.abspath('')}\{title}\Part_0\{str(i).zfill(6)}.ts" for i in range(count)]
+            for ts_po in filelist:
+                with open(fr"{os.path.abspath('')}\{title}\{title}.ts", 'ab') as f:
+                    with open(ts_po, 'rb') as t:
+                        f.write(t.read())
+            # 检查合并是否完成
+            if os.path.exists(fr"{os.path.abspath('')}\{title}\{title}.ts") == True:
+                print('\t合并完成！', end='')
 
-            elif system == 'Windows':
-                filelist = [fr"{os.path.abspath('')}\{title}\Part_0\{str(i).zfill(6)}.ts" for i in range(count)]
-                for ts_po in filelist:
-                    with open(fr"{os.path.abspath('')}\{title}\{title}.ts", 'ab') as f:
-                        with open(ts_po, 'rb') as t:
-                            f.write(t.read())
-                # 检查合并是否完成
-                if os.path.exists(fr"{os.path.abspath('')}\{title}\{title}.ts") == True:
-                    print('\t合并完成！', end='')
-                    # 视频转码
-                    # ffmpeg -y -i II_11_3_1.ts -c:v libx264 -c:a copy -bsf:a aac_adtstoasc output.mp4
-                    print('视频转码……\t',end='')
-                    cmd = fr'ffmpeg -i "{os.path.abspath("")}\{title}\{title}.ts" -c copy "{os.path.abspath("")}\{title}.mp4" -loglevel panic'
-                    os.system(cmd)
-                    print('转码成功！')
+                print('视频转码……\t', end='')
+                self.ffmpeg(input_path=fr'{os.path.abspath("")}\{title}\{title}.ts',
+                            output_path=fr'{os.path.abspath("")}\{title}.mp4')
+                print('转码成功！')
 
-            if enabledel == True:
-                self.del_after_done()
-        else:
-            print('\t合并失败……\t',end='')
+        if enabledel == True:
+            self.del_after_done()
 
+    def ffmpeg(self,input_path,output_path):
+        ff = FFmpeg(inputs={input_path: None}, outputs={output_path: '-c copy -loglevel panic'})
+        # print(ff.cmd)
+        ff.run()
 
     def del_after_done(self):
         rmtree(rf'{os.path.abspath("")}\{title}', ignore_errors=True)
         if os.path.exists(rf'{os.path.abspath("")}\{title}') == False:
             print('删除分片成功！')
 
-def run(m3u8,name='',b64key='',b64iv='',enableDel=False,m3u8BaseUrl=''):
-    m3u8infos(m3u8, name, b64key, b64iv, m3u8BaseUrl, enableDel).putsegments()
+def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl=''):
+    # m3u8infos(m3u8, name, b64key, b64iv, m3u8BaseUrl, enableDel).putsegments()
     try:
         m3u8infos(m3u8, name, b64key, b64iv, m3u8BaseUrl, enableDel).putsegments()
     except:
@@ -263,7 +263,7 @@ def run(m3u8,name='',b64key='',b64iv='',enableDel=False,m3u8BaseUrl=''):
         t.start()
 
 if __name__ == '__main__':
-    m3u8 = r'https://video-tx.huke88.com/cb3d3408vodtransgzp1256517420/4dfb4d0b5285890807377114074/voddrm.token.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9~eyJ0eXBlIjoiRHJtVG9rZW4iLCJhcHBJZCI6MTI1NjUxNzQyMCwiZmlsZUlkIjoiNTI4NTg5MDgwNzM3NzExNDA3NCIsImN1cnJlbnRUaW1lU3RhbXAiOjE2MjU0OTA1MDEsImV4cGlyZVRpbWVTdGFtcCI6MjE0NzQ4MzY0NywicmFuZG9tIjo0MTg3ODIwOTg5LCJvdmVybGF5S2V5IjoiMGZjYTc0MzJmZGIzNDQ5YzBhNzIzMjg2NTA0ZDk4ODYiLCJvdmVybGF5SXYiOiJmZDZiOGEyMmNkNWFmOTk3Zjc5MDhkNTkxMGVkMGQwYiIsImNpcGhlcmVkT3ZlcmxheUtleSI6IiIsImNpcGhlcmVkT3ZlcmxheUl2IjoiIiwia2V5SWQiOjAsInN0cmljdE1vZGUiOjB9~2TknVZiPdfYi__AG7n4QyXG7CQzdaUakS33uFb6CRk0.video_12_3.m3u8?rlimit=3&sign=dd8e20c1818948ba0185f18cdbd69371&t=60e32e71&us=1625490497'
+    m3u8 = r'https://apd-ffd5b6848ea656ba3ea922752cd01391.v.smtcdns.com/omts.tc.qq.com/AHp8xEH5-04o_vEqU_jjae359DCZH6QHmOK7QTc4yruE/uwMROfz2r55goaQXGdGnC2de64gtX89GT746tcTJVnDpJgsD/svp_50112/3tA3bGPTljbpqRfWDbdXnwcVb3lmfsdw3jG3CDZtQrTcicALPXgDPvuXkpxMYHbRSFSJ4gLhe04U-CY9SfrYdczq8qOBKDCkgWv23kXlXpq531FLNEMji_NzzKqJYzjxa14S2rjXy1wIxRdAMuvIhRuxmYJYQCroO5VZCH0cd4DmQQ0P38sklg/gzc_1000102_0b53dyabyaaatyaihi7cnfqmahwddqmaagca.f321004.ts.m3u8?ver=4'
     run(m3u8=m3u8, name='', b64key='',m3u8BaseUrl='')
 
 
