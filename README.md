@@ -1,4 +1,4 @@
-# 一个Python的m3u8流视频下载脚本
+# m3u8流视频下载脚本 支持多平台调用
 
 ## 介绍
 
@@ -32,16 +32,10 @@ m3u8down2.run(m3u8=m3u8, name='333', b64key='kNqWiPWUIWV1dIuTP5ACBQ==')
 ### 简单说明
 
 1. 代码分为两个类，一个解析m3u8链接为标准可识别的链接，另一个为多线程下载类。
-
 2. 文件无法解密时支持二进制合并
-
 3. 支持本地读取key文件
-
-4. 视频默认先二进制合并，然后ffmpeg转码
-
+4. 视频默认二进制合并,内置ffmpeg转码
 5. 支持linux平台调用
-
-   
 
 
 
@@ -53,9 +47,7 @@ m3u8down2.run(m3u8=m3u8, name='333', b64key='kNqWiPWUIWV1dIuTP5ACBQ==')
 
 只支持AES-128解密
 
-使用需要 ffmpeg 合并
-
-## 链接
+## Github
 
 github : [Nchujx/m3u8down: 一个m3u8视频流下载脚本 (github.com)](https://github.com/Nchujx/m3u8down/)
 
