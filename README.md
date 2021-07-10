@@ -56,7 +56,17 @@ https://github.com/Nchujx/m3u8down/blob/main/m3u8down2.py
 
 暂且只支持aes-128-cbc解密
 
+暂不支持代理，自定义请求头
+
 ## Github
 
-github : [Nchujx/m3u8down: 一个m3u8视频流下载脚本 (github.com)](https://github.com/Nchujx/m3u8down/)
+github :https://github.com/Nchujx/m3u8down
+
+release:https://github.com/Nchujx/m3u8down/releases
+
+
+
+
+
+
 
