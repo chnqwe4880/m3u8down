@@ -6,7 +6,9 @@ m3u8流视频日益常见，目前好用的下载器也有很多，我把之前�
 
 ## 使用方法
 
-在python中直接运行程序或进行外部调用
+### 方法一
+
+用python 调用源码
 
 ```
 import m3u8down2
@@ -15,37 +17,44 @@ m3u8 = 'https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.
 m3u8down2.run(m3u8=m3u8, name='333', b64key='kNqWiPWUIWV1dIuTP5ACBQ==')
 ```
 
+### 方法二
+
+命令行调用下载器
+
+<url>[afa31d276e9acf946cbc04999a1e23ba.png (1207×305) (chaoxing.com)](http://p.ananas.chaoxing.com/star3/origin/afa31d276e9acf946cbc04999a1e23ba.png)</url>
+
+详细命令：
+
 ### 下载指令
 
-| m3u8        | 输入的m3u8链接或本地文件 | https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8 或 C:\Users\happy\Downloads\v.f230 |
-| ----------- | ------------------------ | ------------------------------------------------------------ |
-| name        | 自定义名称               |                                                              |
-| b64key      | 自定义key                |                                                              |
-| b64iv       | 自定义iv                 |                                                              |
-| enableDel   | 下载后自动删除           | 默认为True                                                   |
-| m3u8BaseUrl | 链接前缀                 | 用在拖入本地文件时链接不全                                   |
+| -m3u8        | 视频地址：网络链接或本地文件链接 | https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8 或 C:\Users\happy\Downloads\v.f230 |
+| ------------ | -------------------------------- | ------------------------------------------------------------ |
+| -name        | 自定义名称                       |                                                              |
+| -b64key      | 自定义key                        |                                                              |
+| -b64iv       | 自定义iv                         |                                                              |
+| -enableDel   | 下载后自动删除                   | 默认为True                                                   |
+| -m3u8BaseUrl | 链接前缀                         | 用在拖入本地文件时链接不全                                   |
+| -showLogs    | 显示错误日志                     | 默认False                                                    |
+| -Threads     | 线程数                           | 默认16线程                                                   |
+| -retries     | 尝试重试次数                     | 默认16                                                       |
 
 ## 源码
 
-见附件m3u8down.py
+https://github.com/Nchujx/m3u8down/blob/main/m3u8down2.py
 
 ### 简单说明
 
-1. 代码分为两个类，一个解析m3u8链接为标准可识别的链接，另一个为多线程下载类。
-2. 文件无法解密时支持二进制合并
-3. 支持本地读取key文件
-4. 视频默认二进制合并,内置ffmpeg转码
-5. 支持linux平台调用
-
-
+1. 采用多线程方式下载m3u8类视频
+2. 支持aes-cbc解密，以及对不能解密的视频二进制合并
+3. 可采用命令行方式调用成品或python内直接调用源码进行使用
+4. 该下载器内置ffmpeg，自带转码和合并
+5. 可在linux下使用
 
 ### 不足
 
-代码可以精简到一个类中，但是多线程会不太好写
+采用线程方式，可能会导致电脑卡顿
 
-默认16线程，可能会导致电脑卡
-
-只支持AES-128解密
+暂且只支持aes-128-cbc解密
 
 ## Github
 
