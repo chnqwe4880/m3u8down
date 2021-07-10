@@ -21,7 +21,7 @@ m3u8down2.run(m3u8=m3u8, name='333', b64key='kNqWiPWUIWV1dIuTP5ACBQ==')
 
 命令行调用下载器
 
-[url=https://imgtu.com/i/Wpy5o4][img]https://z3.ax1x.com/2021/07/10/Wpy5o4.jpg[/img][/url]
+[![Wpy5o4.jpg](https://z3.ax1x.com/2021/07/10/Wpy5o4.jpg)](https://imgtu.com/i/Wpy5o4)
 
 详细命令：
 
