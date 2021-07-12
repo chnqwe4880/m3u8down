@@ -1,5 +1,4 @@
 import re,os,time
-
 from ffmpy import FFmpeg
 from shutil import rmtree
 import requests
@@ -231,13 +230,15 @@ def process_bar(title,count):
         m, s = divmod(int(ETA), 60)
         ETA = f'{m} m {s} s'
         number = int(round(Missions_completed / count * 100, 2) / 2)
-        mat = "{:16}{:51}{:70}"
+        mat = "{:70}{:8}{:20}{:10}{:10}"
         print(mat.format(
-            f"\r{Fore.RED}Downloading……",
-            f"{Fore.RED+'-' * number+Fore.BLACK+'-'*(50-number)}",
-            f"{Fore.BLUE}{str(round(Missions_completed / count * 100, 2))+'%'} • {Fore.CYAN}[{Missions_completed}/{count}] • {Fore.GREEN}[{round(downsize / 1024 / 1024, 2)}Mb/{round(preallsize / 1024 / 1024, 2)}Mb] • {round(speed / 1024 / 1024, 2)}Mb/s • {ETA}"),
+            f"\r{'#' * number+'-'*(50-number)} {str(round(Missions_completed / count * 100, 2))+'%'}",
+            f"[{Missions_completed}/{count}]",
+            f"[{round(downsize / 1024 / 1024, 2)}Mb/{round(preallsize / 1024 / 1024, 2)}Mb]",
+            f"{round(speed / 1024 / 1024, 2)}Mb/s",
+            f"{ETA}"),
             end='')
-        print(Fore.RESET)
+
         if Missions_completed == count:
             break
         time.sleep(0.5)
@@ -259,10 +260,6 @@ def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=F
     t = Thread(target=process_bar, args=[title,count])
     t.start()
 
-
-
 if __name__ == '__main__':
     m3u8 = r"https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8"
     run(m3u8=m3u8, name='', b64key='kNqWiPWUIWV1dIuTP5ACBQ==',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
-
-
