@@ -17,6 +17,8 @@ m3u8 = 'https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.
 m3u8down2.run(m3u8=m3u8, name='333', b64key='kNqWiPWUIWV1dIuTP5ACBQ==')
 ```
 
+[![WPgCHP.jpg](https://z3.ax1x.com/2021/07/12/WPgCHP.jpg)](https://imgtu.com/i/WPgCHP)
+
 ### 方法二
 
 命令行调用下载器
@@ -49,6 +51,7 @@ https://github.com/Nchujx/m3u8down/blob/main/m3u8down2.py
 3. 可采用命令行方式调用成品或python内直接调用源码进行使用
 4. 该下载器内置ffmpeg，自带转码和合并
 5. 可在linux下使用
+6. 彩色文本输出
 
 ### 不足
 
@@ -63,10 +66,5 @@ https://github.com/Nchujx/m3u8down/blob/main/m3u8down2.py
 github :https://github.com/Nchujx/m3u8down
 
 release:https://github.com/Nchujx/m3u8down/releases
-
-
-
-
-
 
 
