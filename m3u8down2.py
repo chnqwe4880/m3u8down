@@ -7,7 +7,7 @@ import base64,json
 from Crypto.Cipher import AES
 from queue import Queue
 from threading import Thread
-from argparse import ArgumentParser
+from colorama import Fore
 ###############
 # 初始化
 q = Queue(10000)
@@ -230,15 +230,17 @@ def process_bar(title,count):
         ETA = (preallsize - downsize) / speed
         m, s = divmod(int(ETA), 60)
         ETA = f'{m} m {s} s'
-        mat = "{:15}{:51}{:70}"
+        number = int(round(Missions_completed / count * 100, 2) / 2)
+        mat = "{:16}{:51}{:70}"
         print(mat.format(
-            f"\r{title}",
-            f"{'#' * int(round(Missions_completed / count * 100, 2) / 2)}",
-            f"{round(Missions_completed / count * 100, 2)}% • [{Missions_completed}/{count}] • [{round(downsize / 1024 / 1024, 2)}Mb/{round(preallsize / 1024 / 1024, 2)}Mb] • Speed={round(speed / 1024 / 1024, 2)}Mb/s • ETA={ETA}"),
+            f"\r{Fore.RED}Downloading……",
+            f"{Fore.RED+'-' * number+Fore.BLACK+'-'*(50-number)}",
+            f"{Fore.BLUE}{str(round(Missions_completed / count * 100, 2))+'%'} • {Fore.CYAN}[{Missions_completed}/{count}] • {Fore.GREEN}[{round(downsize / 1024 / 1024, 2)}Mb/{round(preallsize / 1024 / 1024, 2)}Mb] • {round(speed / 1024 / 1024, 2)}Mb/s • {ETA}"),
             end='')
+        print(Fore.RESET)
         if Missions_completed == count:
             break
-        time.sleep(0.2)
+        time.sleep(0.5)
 
 
 def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16):
@@ -260,24 +262,7 @@ def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=F
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(
-        prog="https://github.com/Nchujx/m3u8down",
-        description=("M3U8 streaming video download script,this is python version.")
-    )
-    parser.add_argument("-m3u8", help="视频地址：网络链接或本地文件链接")
-    parser.add_argument("-name", default='', help="视频名称")
-    parser.add_argument("-b64key", default='', help="自定义key:base64编码")
-    parser.add_argument("-b64iv", default='', help="自定义iv:base64编码")
-    parser.add_argument("-enableDel", default=True, help="下载完后删除多余文件", type=bool)
-    parser.add_argument("-m3u8BaseUrl", default='', help="链接前缀:用于补全链接")
-    parser.add_argument("-showLogs", default=False, help="显示错误日志")
-    parser.add_argument("-Threads", default=16, help="线程数")
-    parser.add_argument("-retries", default=16, help="尝试重试次数")
-    args = parser.parse_args()
-    run(m3u8=args.m3u8, name=args.name, b64key=args.b64key, b64iv=args.b64iv, enableDel=args.enableDel,
-        m3u8BaseUrl=args.m3u8BaseUrl, showLogs=args.showLogs, Threads=args.Threads, retries=args.retries)
-
-    # m3u8 = r"C:\Users\happy\Desktop\Notes\mypython\快速算量展示课1.m3u8"
-    # run(m3u8=m3u8, name='', b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
+    m3u8 = r"https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8"
+    run(m3u8=m3u8, name='', b64key='kNqWiPWUIWV1dIuTP5ACBQ==',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
 
 
