@@ -7,13 +7,10 @@ import base64,json
 from Crypto.Cipher import AES
 from queue import Queue
 from threading import Thread
-import platform
 from argparse import ArgumentParser
-
 ###############
 # 初始化
 q = Queue(10000)
-system = platform.system()
 headers = {
     'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36 Edg/91.0.864.59'
 }
@@ -128,7 +125,7 @@ class m3u8infos:
                 'segments': segments
             }
         }
-        print(f'{self.title} m3u8文件解析完成……')
+        print(f'{self.title} Download Start.')
         with open(f'{self.title}/meta.json', 'w', encoding='utf-8') as f:
             f.write(json.dumps(self.meta, indent=4))
         return self.meta
@@ -169,7 +166,6 @@ class Consumer(Thread):
                 time.sleep(1)
                 if i == self.retries-1:
                     ts = b''
-
         if segment['method'] == 'AES-128':
             key = base64.b64decode(segment['key'])
             if len(key) != 16:
@@ -179,6 +175,7 @@ class Consumer(Thread):
             cryptor = AES.new(key=key, mode=AES.MODE_CBC,iv=iv)
 
             ts = cryptor.decrypt(ts)
+
         with open(f'{self.title}/Part_0/{index}.ts', 'wb') as f:
             f.write(ts)
 
@@ -186,14 +183,6 @@ class Consumer(Thread):
         downsize += ts.__sizeof__()
         Missions_completed += 1
         preallsize = downsize * self.count / Missions_completed
-        end = time.time()
-        speed = downsize / (end - time_start)
-        ETA = (preallsize - downsize) / speed
-        m, s = divmod(int(ETA), 60)
-        ETA = f'{m} m {s} s'
-        mat = "{:18}{:30}{:18}{:20}"
-        print(mat.format(f"\r\tProcess:[{Missions_completed}/{self.count}]",f"[{round(downsize / 1024 / 1024, 2)}Mb/{round(preallsize / 1024 / 1024, 2)}Mb]", f"Speed={round(speed / 1024 / 1024, 2)}Mb/s",f'ETA={ETA}'),end='')
-
 
         if Missions_completed == self.count:
             # arg = 'copyb' if segment['method'] == 'SAMPLE-AES-CTR' else 'normal'
@@ -201,11 +190,10 @@ class Consumer(Thread):
 
     def combine(self):
         """
-        采用二进制合并
-        Linux Windows 路径写法不同，代码大部分重复
-        :return:
+        二进制合并视频
+        转码
         """
-        print('\t视频合并中……',end='')
+        # print('\t视频合并中……',end='')
         filelist = [fr"{os.path.abspath('')}/{self.title}/Part_0/{str(i).zfill(6)}.ts" for i in range(self.count)]
 
         for ts_po in filelist:
@@ -214,11 +202,11 @@ class Consumer(Thread):
                     f.write(t.read())
         # 检查合并是否完成
         if os.path.exists(fr"{os.path.abspath('')}/{self.title}/{self.title}.ts") == True:
-            print('\t合并完成！', end='')
-            print('\t视频转码……', end='')
+            # print('\t合并完成！', end='')
+            # print('\t视频转码……', end='')
             self.ffmpeg(input_path=fr'{os.path.abspath("")}/{self.title}/{self.title}.ts',
                         output_path=fr'{os.path.abspath("")}/{self.title}.mp4')
-            print('\t转码成功！', end='')
+            # print('\t转码成功！', end='')
 
         if self.enableDel == True:
             self.del_after_done()
@@ -229,8 +217,29 @@ class Consumer(Thread):
 
     def del_after_done(self):
         rmtree(rf'{os.path.abspath("")}\{self.title}', ignore_errors=True)
-        if os.path.exists(rf'{os.path.abspath("")}\{self.title}') == False:
-            print('\t删除分片成功！')
+        # if os.path.exists(rf'{os.path.abspath("")}\{self.title}') == False:
+            # print('\t删除分片成功！')
+
+def process_bar(title,count):
+    global Missions_completed,preallsize,downsize
+    while Missions_completed <= count:
+        end = time.time()
+        speed = downsize / (end - time_start)
+        if speed == 0.0:
+            speed = 0.1
+        ETA = (preallsize - downsize) / speed
+        m, s = divmod(int(ETA), 60)
+        ETA = f'{m} m {s} s'
+        mat = "{:15}{:51}{:70}"
+        print(mat.format(
+            f"\r{title}",
+            f"{'#' * int(round(Missions_completed / count * 100, 2) / 2)}",
+            f"{round(Missions_completed / count * 100, 2)}% • [{Missions_completed}/{count}] • [{round(downsize / 1024 / 1024, 2)}Mb/{round(preallsize / 1024 / 1024, 2)}Mb] • Speed={round(speed / 1024 / 1024, 2)}Mb/s • ETA={ETA}"),
+            end='')
+        if Missions_completed == count:
+            break
+        time.sleep(0.2)
+
 
 def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16):
     meta = m3u8infos().start(m3u8, name, b64key, b64iv, m3u8BaseUrl, enableDel,showLogs)
@@ -241,10 +250,14 @@ def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=F
     segments = meta['m3u8Info']['segments']
     for segment in segments:
         q.put(segment)
-    print(f"\r\tProcess:[0/]    [/]                           Speed= Mb/s        ETA= m  s",end='')
     for i in range(Threads):
         t = Consumer(title,count,retries,enableDel,showLogs)
         t.start()
+    # 进度条线程
+    t = Thread(target=process_bar, args=[title,count])
+    t.start()
+
+
 
 if __name__ == '__main__':
     parser = ArgumentParser(
@@ -264,7 +277,7 @@ if __name__ == '__main__':
     run(m3u8=args.m3u8, name=args.name, b64key=args.b64key, b64iv=args.b64iv, enableDel=args.enableDel,
         m3u8BaseUrl=args.m3u8BaseUrl, showLogs=args.showLogs, Threads=args.Threads, retries=args.retries)
 
-    # m3u8 = 'https://1252524126.vod2.myqcloud.com/9764a7a5vodtransgzp1252524126/987bb91f5285890799770660639/drm/v.f230.m3u8'
+    # m3u8 = r"C:\Users\happy\Desktop\Notes\mypython\快速算量展示课1.m3u8"
     # run(m3u8=m3u8, name='', b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
 
 
