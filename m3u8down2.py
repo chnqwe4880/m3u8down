@@ -259,6 +259,9 @@ def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=F
     # 进度条线程
     t = Thread(target=process_bar, args=[title,count])
     t.start()
+    while t.is_alive():
+        time.sleep(2)
+    print('\n')
 
 if __name__ == '__main__':
     m3u8 = r"https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8"
