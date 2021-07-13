@@ -6,7 +6,6 @@ import base64,json
 from Crypto.Cipher import AES
 from queue import Queue
 from threading import Thread
-from colorama import Fore
 ###############
 # 初始化
 q = Queue(10000)
@@ -51,12 +50,12 @@ class m3u8infos:
 
     def check_title(self,title):
         title = re.sub(r"\\/:*?\"<>| ", "", title)[-64:]
-        if os.path.exists(f'{title}.mp4'):
+        if os.path.exists(f'{self.workDir}/{title}.mp4'):
             title += '(1)'
             title = self.check_title(title)
         return title
 
-    def start(self,m3u8,name,key,iv,m3u8BaseUrl,enableDel,showLogs):
+    def start(self,m3u8,workDir,name,key,iv,m3u8BaseUrl,enableDel,showLogs):
         # http://****.m3u8
         if ':\\' not in m3u8:
             if name == '':
@@ -76,12 +75,14 @@ class m3u8infos:
             with open(f'{m3u8}', 'r') as f:
                 self.m3u8text = f.read()
             self.m3u8BaseUrl = m3u8BaseUrl
+        self.workDir = workDir
         self.title = self.check_title(self.title)
+        if os.path.exists(self.workDir) == False:
+            os.makedirs(self.workDir)
 
-
-        if os.path.exists(self.title) == False:
-            os.makedirs(self.title)
-            os.makedirs(f'{self.title}/Part_0')
+        if os.path.exists(self.workDir+'/'+self.title) == False:
+            os.makedirs(self.workDir+'/'+self.title)
+            os.makedirs(f'{self.workDir+"/"+self.title}/Part_0')
         self.tsurls = re.findall('#EXTINF.+\n(.+?)\n', self.m3u8text)
         self.count = len(self.tsurls)
 
@@ -125,14 +126,15 @@ class m3u8infos:
             }
         }
         print(f'{self.title} Download Start.')
-        with open(f'{self.title}/meta.json', 'w', encoding='utf-8') as f:
+        with open(f'{self.workDir}/{self.title}/meta.json', 'w', encoding='utf-8') as f:
             f.write(json.dumps(self.meta, indent=4))
         return self.meta
 
 class Consumer(Thread):
-    def __init__(self,title,count,retries,enableDel,showLogs):
+    def __init__(self,title,workDir,count,retries,enableDel,showLogs):
         Thread.__init__(self)
         self.title = title
+        self.workDir = workDir
         self.count = count
         self.retries = retries
         self.enableDel = enableDel
@@ -175,7 +177,7 @@ class Consumer(Thread):
 
             ts = cryptor.decrypt(ts)
 
-        with open(f'{self.title}/Part_0/{index}.ts', 'wb') as f:
+        with open(f'{self.workDir}/{self.title}/Part_0/{index}.ts', 'wb') as f:
             f.write(ts)
 
         # 进度条
@@ -193,18 +195,18 @@ class Consumer(Thread):
         转码
         """
         # print('\t视频合并中……',end='')
-        filelist = [fr"{os.path.abspath('')}/{self.title}/Part_0/{str(i).zfill(6)}.ts" for i in range(self.count)]
+        filelist = [fr"{self.workDir}/{self.title}/Part_0/{str(i).zfill(6)}.ts" for i in range(self.count)]
 
         for ts_po in filelist:
-            with open(fr"{os.path.abspath('')}/{self.title}/{self.title}.ts", 'ab') as f:
+            with open(fr"{self.workDir}/{self.title}/{self.title}.ts", 'ab') as f:
                 with open(ts_po, 'rb') as t:
                     f.write(t.read())
         # 检查合并是否完成
-        if os.path.exists(fr"{os.path.abspath('')}/{self.title}/{self.title}.ts") == True:
+        if os.path.exists(fr"{self.workDir}/{self.title}/{self.title}.ts") == True:
             # print('\t合并完成！', end='')
             # print('\t视频转码……', end='')
-            self.ffmpeg(input_path=fr'{os.path.abspath("")}/{self.title}/{self.title}.ts',
-                        output_path=fr'{os.path.abspath("")}/{self.title}.mp4')
+            self.ffmpeg(input_path=fr'{self.workDir}/{self.title}/{self.title}.ts',
+                        output_path=fr'{self.workDir}/{self.title}.mp4')
             # print('\t转码成功！', end='')
 
         if self.enableDel == True:
@@ -215,7 +217,7 @@ class Consumer(Thread):
         ff.run()
 
     def del_after_done(self):
-        rmtree(rf'{os.path.abspath("")}\{self.title}', ignore_errors=True)
+        rmtree(rf'{self.workDir}\{self.title}', ignore_errors=True)
         # if os.path.exists(rf'{os.path.abspath("")}\{self.title}') == False:
             # print('\t删除分片成功！')
 
@@ -244,8 +246,8 @@ def process_bar(title,count):
         time.sleep(0.5)
 
 
-def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16):
-    meta = m3u8infos().start(m3u8, name, b64key, b64iv, m3u8BaseUrl, enableDel,showLogs)
+def run(m3u8,workDir='./',name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16):
+    meta = m3u8infos().start(m3u8,workDir,name, b64key, b64iv, m3u8BaseUrl, enableDel,showLogs)
 
     title = meta['title']
     count = meta['m3u8Info']['count']
@@ -254,7 +256,7 @@ def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=F
     for segment in segments:
         q.put(segment)
     for i in range(Threads):
-        t = Consumer(title,count,retries,enableDel,showLogs)
+        t = Consumer(title,workDir,count,retries,enableDel,showLogs)
         t.start()
     # 进度条线程
     t = Thread(target=process_bar, args=[title,count])
@@ -265,4 +267,4 @@ def run(m3u8,name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=F
 
 if __name__ == '__main__':
     m3u8 = r"https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8"
-    run(m3u8=m3u8, name='', b64key='kNqWiPWUIWV1dIuTP5ACBQ==',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
+    run(m3u8=m3u8,workDir='./',name='123', b64key='kNqWiPWUIWV1dIuTP5ACBQ==',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
