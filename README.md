@@ -31,6 +31,7 @@ m3u8down2.run(m3u8=m3u8, name='333', b64key='kNqWiPWUIWV1dIuTP5ACBQ==')
 
 | -m3u8        | 视频地址：网络链接或本地文件链接 | https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8 或 C:\Users\happy\Downloads\v.f230 |
 | ------------ | -------------------------------- | ------------------------------------------------------------ |
+| -workDir     | 视频下载目录                     | 默认 ./                                                      |
 | -name        | 自定义名称                       |                                                              |
 | -b64key      | 自定义key                        |                                                              |
 | -b64iv       | 自定义iv                         |                                                              |
@@ -51,7 +52,6 @@ https://github.com/Nchujx/m3u8down/blob/main/m3u8down2.py
 3. 可采用命令行方式调用成品或python内直接调用源码进行使用
 4. 该下载器内置ffmpeg，自带转码和合并
 5. 可在linux下使用
-6. 彩色文本输出
 
 ### 不足
 
@@ -66,5 +66,6 @@ https://github.com/Nchujx/m3u8down/blob/main/m3u8down2.py
 github :https://github.com/Nchujx/m3u8down
 
 release:https://github.com/Nchujx/m3u8down/releases
+
 
 
