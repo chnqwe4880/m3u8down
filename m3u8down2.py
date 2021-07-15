@@ -6,6 +6,7 @@ import base64,json
 from Crypto.Cipher import AES
 from queue import Queue
 from threading import Thread
+from argparse import ArgumentParser
 ###############
 # 初始化
 q = Queue(10000)
@@ -49,7 +50,7 @@ class m3u8infos:
             return b64iv
 
     def check_title(self,title):
-        title = re.sub(r"\\/:*?\"<>| ", "", title)[-64:]
+        title = re.sub(r"\\/:*?\"<>|:\(\) ", "", title)[-64:]
         if os.path.exists(f'{self.workDir}/{title}.mp4'):
             title += '(1)'
             title = self.check_title(title)
@@ -77,11 +78,14 @@ class m3u8infos:
             self.m3u8BaseUrl = m3u8BaseUrl
         self.workDir = workDir
         self.title = self.check_title(self.title)
+        self.title = self.title.replace(':','').replace(' ','')
         if os.path.exists(self.workDir) == False:
             os.makedirs(self.workDir)
 
-        if os.path.exists(self.workDir+'/'+self.title) == False:
-            os.makedirs(self.workDir+'/'+self.title)
+        if os.path.exists(f'{self.workDir}/{self.title}') == False:
+            print(f'{self.workDir}/{self.title}')
+            os.makedirs(f'{self.workDir}/{self.title}')
+
             os.makedirs(f'{self.workDir+"/"+self.title}/Part_0')
         self.tsurls = re.findall('#EXTINF.+\n(.+?)\n', self.m3u8text)
         self.count = len(self.tsurls)
@@ -266,5 +270,21 @@ def run(m3u8,workDir='./',name='',b64key='',b64iv='',enableDel=True,m3u8BaseUrl=
     print('\n')
 
 if __name__ == '__main__':
-    m3u8 = r"https://hls.videocc.net/379c2a7b33/9/379c2a7b330e4b497b07af76502c9449_1.m3u8"
-    run(m3u8=m3u8,workDir='./',name='123', b64key='kNqWiPWUIWV1dIuTP5ACBQ==',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
+    parser = ArgumentParser(
+        prog="https://github.com/Nchujx/m3u8down",
+        description=("M3U8 streaming video download script,this is python version.")
+    )
+    parser.add_argument("-m3u8", help="视频地址：网络链接或本地文件链接")
+    parser.add_argument("-name", default='', help="视频名称")
+    parser.add_argument("-workDir",default='./')
+    parser.add_argument("-b64key", default='', help="自定义key:base64编码")
+    parser.add_argument("-b64iv", default='', help="自定义iv:base64编码")
+    parser.add_argument("-enableDel", default=True, help="下载完后删除多余文件", type=bool)
+    parser.add_argument("-m3u8BaseUrl", default='', help="链接前缀:用于补全链接")
+    parser.add_argument("-showLogs", default=False, help="显示错误日志")
+    args = parser.parse_args()
+    run(m3u8=args.m3u8, name=args.name,workDir=args.workDir,b64key=args.b64key, b64iv=args.b64iv, enableDel=args.enableDel,
+        m3u8BaseUrl=args.m3u8BaseUrl, showLogs=args.showLogs)
+
+    # m3u8 = r"https://video.gdt.ablesky.com/nod/coursecontent/2020/06/30/5ff9274c-0d2c-427c-9c3b-7084e5dbe5a6.mp4/index.m3u8?userName=GUEST&uuid=521e1723-6f36-496a-95d4-8cd1313400e5&isRec=0&st=P4c5AhVh9_XzmdPkPpJMGg&e=1626309310"
+    # run(m3u8=m3u8,workDir='小班课',name='123（）', b64key='',b64iv='',enableDel=True,m3u8BaseUrl='',showLogs=False,Threads=16,retries=16)
